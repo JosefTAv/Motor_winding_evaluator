@@ -1,6 +1,11 @@
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 //using std::vector;
+#define DEBUG
+
+#define id(x) #x //return name of variable
+#define FIRST_HALL_SENSOR_PIN 22
+#define NB_HALL_SENSORS 12
 
 #define Correct 1
 #define A1inv 2
@@ -67,6 +72,7 @@
 #define A2BCinv 63
 #define ABCinv 64
 
+//Types of known coil winding combinations
 String combinationNames[] = {
   "Correct",  "A1inv",  "A2inv",  "Ainv", "B1inv",  
   "A1B1inv",  "A2B1inv",  "AB1inv", "B2inv",  "A1B2inv",  
@@ -83,6 +89,7 @@ String combinationNames[] = {
   "BCinv",  "A1BCinv",  "A2BCinv",  "ABCinv"
 };
 
+//Known coil winding combinations
 uint16_t combinations[] = { 
   0b101001010110, 0b011001010110, 0b101001100110, 0b011001100110, 0b101001010101, 
   0b011001010101, 0b101001100101, 0b011001100101, 0b101010010110, 0b011010010110, 
@@ -99,50 +106,107 @@ uint16_t combinations[] = {
   0b100110011001, 0b010110011001, 0b100110101001, 0b010110101001
 };
 
-
-#define id(x) #x //return name of variable
-
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
-//Coil winding combinations
-
 const int enablePin = 1;
-//const int 
+volatile boolean activated = false; 
+int i =0;
 
-void setup()
-{
+//Function prototypes
+void initHallSensors(void);
+uint16_t readHallSensors(void);
+boolean evaluateMotor(uint16_t reading, String &s);
+void displayLCD(boolean comboFound, String combinationName);
+void enableSignalISR(void);
+
+void setup(){
+  Serial.begin(115200);
+  delay(50);
   lcd.init();                      // initialize the lcd 
   lcd.backlight();
-  Serial.begin(9600);
+  initHallSensors();
+  //attachInterrupt(digitalPinToInterrupt(enablePin), enableSignalISR, FALLING); //interrupt for the 
+}
+
+void loop(){
+  i++;
+  if(i%1000000000==0)
+    activated = true;
+    
+  if(activated){
+    //uint16_t reading = 0b010110101000; //test value for use without the hall sensors
+    uint16_t reading = readHallSensors();
+    String combinationName = "";
+    boolean comboFound = evaluateMotor(reading, combinationName);
+    Serial.println("----");
+    activated = false;
+  }
   
-  uint16_t test = 0b010110101000;
-  bool found = false;
-  delay(50);
+}
+
+void initHallSensors(void){
+  for(int i=FIRST_HALL_SENSOR_PIN; i < NB_HALL_SENSORS+FIRST_HALL_SENSOR_PIN; i++){ //MSB first
+    Serial.println(i);
+    pinMode(i, INPUT_PULLUP);
+  }
+}
+
+void enableSignalISR(void){
+  activated = true;
+}
+
+uint16_t readHallSensors(void){
+  uint16_t reading = 0;
   
-  for(int i=0; i<sizeof(combinations)/2;i++){
-    Serial.println(String(test)+"=="+String(combinations[i]));
-    if(test==combinations[i]){
-      Serial.println(combinationNames[i]);
-      lcd.print(combinationNames[i]);
-      found = true;
-      break;
+  for(int i=FIRST_HALL_SENSOR_PIN; i < NB_HALL_SENSORS+FIRST_HALL_SENSOR_PIN; i++){ //MSB first
+    reading |= (digitalRead(i) << (NB_HALL_SENSORS+FIRST_HALL_SENSOR_PIN-1-i)); // each reading is a single bit, the bit shifting enables this
+  }
+  #ifdef DEBUG
+      Serial.print("reading = ");
+      Serial.println(reading, BIN);
+  #endif
+  return reading;
+}
+
+boolean evaluateMotor(uint16_t reading, String &s){
+  bool found = false; //true if the reading corresponds to a known configuration
+  
+  for(int i=0; i < sizeof(combinations)/2; i++){
+    #ifdef DEBUG
+      //Serial.print(reading, BIN);
+      //Serial.print("==");
+      //Serial.println((combinations[i]), BIN);
+    #endif
+    if(reading==combinations[i]){
+      //Serial.println(combinationNames[i]);
+      //lcd.print(combinationNames[i]);
+      s=combinationNames[i];
+      #ifdef DEBUG
+        //Serial.println(s);
+      #endif
+      return true;
     }
   }
   
-  if(!found)
-    lcd.print("No corresponding combination found");
-    //Serial.println(String(test)+"=="+String(combinations[0])+"?: "+String(test==combinations[0]));
+  s="No corresponding combination found"; // only arrive here if no known configuration is found
+  #ifdef DEBUG
+    //Serial.println(s);
+  #endif
+  //lcd.print("No corresponding combination found");
+  return false;
 }
 
-void loop()
-{
-  
+//TODO
+void displayLCD(boolean comboFound, String combinationName){
+  //if true
+    //1. GOOD OR BAD
+    //2. COMBONAME
+    //3. RAW POLE READS
+    //4. WHICH POLES TO SWITCH (Using arrows?)
+  //else
+    //1. big X flashing
+    //2. "No corresponding combination found"
 }
-
-/*template<typename T>
-boolean compareVectors(const vector<T> &t1, const vector<T> &t2) {
-  return t1 == t2; 
-}*/
 
 boolean compareArray(const int8_t a1[], const int8_t a2[]){
   if(sizeof(a1) != sizeof(a2))
