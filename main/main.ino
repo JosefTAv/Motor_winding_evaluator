@@ -1,99 +1,16 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_NeoPixel.h>
+#include "constants.h"
 
 //using std::vector;
 //#define DEBUG
 
 #define id(x) #x //return name of variable
-#define FIRST_HALL_SENSOR_PIN 22
-#define NB_HALL_SENSORS 12
-#define LED_PIN 13
-#define BRIGHTNESS 20
 
-#define Correct 1
-#define A1inv 2
-#define A2inv 3
-#define Ainv 4
-#define B1inv 5
-#define A1B1inv 6
-#define A2B1inv 7
-#define AB1inv 8
-#define B2inv 9
-#define A1B2inv 10
-#define A2B2inv 11
-#define AB2inv 12
-#define Binv 13
-#define A1Binv 14
-#define A2Binv 15
-#define ABinv 16
-#define C1inv 17
-#define A1C1inv 18
-#define A2C1inv 19
-#define AC1inv 20
-#define B1C1inv 21
-#define A1B1C1inv 22
-#define A2B1C1inv 23
-#define AB1C1inv 24
-#define B2C1inv 25
-#define A1B2C1inv 26
-#define A2B2C1inv 27
-#define AB2C1inv 28
-#define BC1inv 29
-#define A1BC1inv 30
-#define A2BC1inv 31
-#define ABC1inv 32
-#define C2inv 33
-#define A1C2inv 34
-#define A2C2inv 35
-#define AC2inv 36
-#define B1C2inv 37
-#define A1B1C2inv 38
-#define A2B1C2inv 39
-#define AB1C2inv 40
-#define B2C2inv 41
-#define A1B2C2inv 42
-#define A2B2C2inv 43
-#define AB2C2inv 44
-#define BC2inv 45
-#define A1BC2inv 46
-#define A2BC2inv 47
-#define ABC2inv 48
-#define Cinv 49
-#define A1Cinv 50
-#define A2Cinv 51
-#define ACinv 52
-#define B1Cinv 53
-#define A1B1Cinv 54
-#define A2B1Cinv 55
-#define AB1Cinv 56
-#define B2Cinv 57
-#define A1B2Cinv 58
-#define A2B2Cinv 59
-#define AB2Cinv 60
-#define BCinv 61
-#define A1BCinv 62
-#define A2BCinv 63
-#define ABCinv 64
-
-//Types of known coil winding combinations
-String combinationNames[] = {
-  "Correct",  "A1inv",  "A2inv",  "Ainv", "B1inv",
-  "A1B1inv",  "A2B1inv",  "AB1inv", "B2inv",  "A1B2inv",
-  "A2B2inv",  "AB2inv", "Binv", "A1Binv", "A2Binv",
-  "ABinv",  "C1inv",  "A1C1inv",  "A2C1inv",  "AC1inv",
-  "B1C1inv",  "A1B1C1inv",  "A2B1C1inv",  "AB1C1inv", "B2C1inv",
-  "A1B2C1inv",  "A2B2C1inv",  "AB2C1inv", "BC1inv", "A1BC1inv",
-  "A2BC1inv", "ABC1inv",  "C2inv",  "A1C2inv",  "A2C2inv",
-  "AC2inv", "B1C2inv",  "A1B1C2inv",  "A2B1C2inv",  "AB1C2inv",
-  "B2C2inv",  "A1B2C2inv",  "A2B2C2inv",  "AB2C2inv", "BC2inv",
-  "A1BC2inv", "A2BC2inv", "ABC2inv",  "Cinv", "A1Cinv",
-  "A2Cinv", "ACinv",  "B1Cinv", "A1B1Cinv", "A2B1Cinv",
-  "AB1Cinv",  "B2Cinv", "A1B2Cinv", "A2B2Cinv", "AB2Cinv",
-  "BCinv",  "A1BCinv",  "A2BCinv",  "ABCinv"
-};
-
-//Known coil winding combinations
+//Known polarity combinations
+//Each bit represents a polarity: 1-> N pole, 0-> S pole
+//LSb represents the measurement of the last hall sensor
 uint16_t combinations[] = {
   0b101001010110, 0b011001010110, 0b101001100110, 0b011001100110, 0b101001010101,
   0b011001010101, 0b101001100101, 0b011001100101, 0b101010010110, 0b011010010110,
@@ -110,61 +27,106 @@ uint16_t combinations[] = {
   0b100110011001, 0b010110011001, 0b100110101001, 0b010110101001
 };
 
-LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
-Adafruit_NeoPixel LEDstrip = Adafruit_NeoPixel(12, LED_PIN, NEO_GRB + NEO_KHZ800); //12 = NB_HALL_SENSORS
+//Corresponding code for each polarity combination
+String combinationNames[] = {
+  "Correct",  "A1inv",  "A2inv",  "Ainv", "B1inv",
+  "A1B1inv",  "A2B1inv",  "AB1inv", "B2inv",  "A1B2inv",
+  "A2B2inv",  "AB2inv", "Binv", "A1Binv", "A2Binv",
+  "ABinv",  "C1inv",  "A1C1inv",  "A2C1inv",  "AC1inv",
+  "B1C1inv",  "A1B1C1inv",  "A2B1C1inv",  "AB1C1inv", "B2C1inv",
+  "A1B2C1inv",  "A2B2C1inv",  "AB2C1inv", "BC1inv", "A1BC1inv",
+  "A2BC1inv", "ABC1inv",  "C2inv",  "A1C2inv",  "A2C2inv",
+  "AC2inv", "B1C2inv",  "A1B1C2inv",  "A2B1C2inv",  "AB1C2inv",
+  "B2C2inv",  "A1B2C2inv",  "A2B2C2inv",  "AB2C2inv", "BC2inv",
+  "A1BC2inv", "A2BC2inv", "ABC2inv",  "Cinv", "A1Cinv",
+  "A2Cinv", "ACinv",  "B1Cinv", "A1B1Cinv", "A2B1Cinv",
+  "AB1Cinv",  "B2Cinv", "A1B2Cinv", "A2B2Cinv", "AB2Cinv",
+  "BCinv",  "A1BCinv",  "A2BCinv",  "ABCinv"
+};
 
-const int enablePin = 3;
+LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line display
+Adafruit_NeoPixel LEDstrip(NB_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800); //12 = NB_HALL_SENSORS
+
 volatile boolean activated = false;
-uint32_t i = 21;
 
 //Function prototypes
+void initLCD();
 void initHallSensors(void);
 void initLEDs(void);
 uint16_t readHallSensors(void);
 boolean evaluateMotor(uint16_t reading, String &s);
-void displayLCD(boolean comboFound, String combinationName);
+void displayNewReadingLCD(boolean comboFound, uint16_t reading, String combinationName);
 void displayNewReadingLED(boolean comboFound, uint16_t reading);
+void displaySameReadingLCD(void);
+void displaySameReadingLED(void);
 void enableSignalISR(void);
+inline bool getBit() __attribute__((always_inline)); //inline in order to improve speed
 
 void setup() {
   Serial.begin(115200);
   delay(50);
-  lcd.init();                      // initialize the lcd
-  lcd.backlight();
-  pinMode(enablePin, INPUT_PULLUP);
+
+  //initialise IO peripherals
+  initLCD();
   initHallSensors();
   initLEDs();
-  attachInterrupt(digitalPinToInterrupt(enablePin), enableSignalISR, FALLING); //interrupt for the enable signal
+  pinMode(ENABLE_PIN, INPUT_PULLUP);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(ENABLE_PIN), enableSignalISR, FALLING); //interrupt for the enable signal
 }
 
 uint16_t oldReading = 0;
+int k=0;
 
 void loop() {
-  
-  if (i % 10000000 == 0){ //simulate enable signal
-    activated = true;
-    Serial.println(i%10);
+  /*if(digitalRead(ENABLE_PIN) == 1){
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, HIGH);
   }
-    
+  else{    
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+  }*/
   if (activated) {
-    //uint16_t reading = 0b010110101000; //test value for use without the hall sensors
+    delay(2000);
+    //uint16_t reading = combinations[k]; //test value for use without the hall sensors
     uint16_t reading = readHallSensors();
+    
     if(reading!=oldReading){
       oldReading=reading;
       String combinationName = "";
       boolean comboFound = evaluateMotor(reading, combinationName);
+      comboFound = true; //for testing
+      displayNewReadingLCD(comboFound, reading, combinationName);
       displayNewReadingLED(comboFound, reading);
       //Serial.println("----");
     }
     else{
+      displaySameReadingLCD();
       displaySameReadingLED();
     }
+    
     activated = false;
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    k++;
   }
 }
 
+void initLCD(void){
+  lcd.init();                     
+  lcd.backlight();
+  lcd.print("State:no measurement"); 
+  lcd.print("Awaiting activation");
+  lcd.createChar(0, upArrow);
+  lcd.createChar(1, downArrow);
+  lcd.createChar(2, cross);
+  lcd.createChar(3, tick);
+}
+
 void initHallSensors(void) {
-  for (int i = FIRST_HALL_SENSOR_PIN; i < NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN; i++) { //MSB first
+  for (int i = FIRST_HALL_SENSOR_PIN; i <= 44 /*NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN*/; i+=2) { //MSB first
     Serial.println(i);
     pinMode(i, INPUT_PULLUP);
   }
@@ -173,20 +135,21 @@ void initHallSensors(void) {
 void initLEDs(void){
   LEDstrip.begin();
   LEDstrip.setBrightness(BRIGHTNESS);
-  LEDstrip.fill(LEDstrip.Color(255, 233, 0));
+  LEDstrip.fill(LEDstrip.Color(255, 255, 255)); //Yellow
   LEDstrip.show(); // Initialize all pixels to 'off'
 }
 
 void enableSignalISR(void) {
   activated = true;
-  Serial.println("ON");
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, HIGH);
 }
 
 uint16_t readHallSensors(void) {
   uint16_t reading = 0;
 
-  for (int i = FIRST_HALL_SENSOR_PIN; i < NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN; i++) { //MSB first
-    reading |= (digitalRead(i) << (NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN - 1 - i)); // each reading is a single bit, the bit shifting enables this
+  for (int i = FIRST_HALL_SENSOR_PIN, j = NB_HALL_SENSORS - 1 ; i <= 44; i+=2, j--) { //MSB first
+    reading |= (digitalRead(i) << j); // each reading is a single bit, the bit shifting enables this
   }
 //#ifdef DEBUG
   Serial.print("reading = ");
@@ -213,15 +176,32 @@ boolean evaluateMotor(uint16_t reading, String &s) {
     }
   }
 
-  s = "No corresponding combination found"; // only arrive here if no known configuration is found
+  s = "Not found"; // only arrive here if no known configuration is found
 #ifdef DEBUG
   Serial.println(s);
 #endif
   return false;
 }
 
-//TODO
-void displayNewReadingLCD(boolean comboFound, String combinationName) {
+void displayNewReadingLCD(boolean comboFound, uint16_t reading, String combinationName) {
+  lcd.clear();
+  lcd.home();
+  lcd.print("State: " + combinationName);
+  lcd.setCursor(0, 1);
+  if(comboFound){
+    lcd.print("Poles: ");
+    for(int i=0; i < NB_HALL_SENSORS; i++)
+      getBit(reading, i) ? lcd.write(0) : lcd.write(1);
+
+    lcd.setCursor(7, 2);
+    reading ^= combinations[CORRECT];
+    for(int i=0; i < NB_HALL_SENSORS; i++){
+      getBit(reading, i) ? lcd.write(2) : lcd.write(3); //Negated because with xor 1 means the values are different
+    }
+  }
+  else{
+    lcd.print("- Please try again -");
+  }
   //if true
   //1. GOOD OR BAD
   //2. COMBONAME
@@ -232,18 +212,15 @@ void displayNewReadingLCD(boolean comboFound, String combinationName) {
   //2. "No corresponding combination found"
 }
 
-//TOFINISH
 void displayNewReadingLED(boolean comboFound, uint16_t reading){
   //comboFound=true; //Just for testing
-  reading ^= combinations[0]; //Find incorrect windings
+  reading ^= combinations[0]; //Find incorrect windings: 1 where the values are different ie. wrong
   LEDstrip.clear();
   if(comboFound){
     for(int i=NB_HALL_SENSORS-1; i >= 0;i--){ //Start from MSb -> LSb
       uint32_t colour = LEDstrip.Color(0, 255, 0); //Green
       
-      uint16_t mask = 1<<i;
-      uint16_t temp = reading & mask; //reading &= 1<<i;
-      if(temp==0) //These three lines extract the bit corresponding to the LED of a winding
+      if(getBit(reading, i)) //This checks if the bit at the given index is 1 or 0
         colour = LEDstrip.Color(255, 0, 0); //Red
         
       LEDstrip.setPixelColor(i, colour);
@@ -252,25 +229,41 @@ void displayNewReadingLED(boolean comboFound, uint16_t reading){
     }
   }
   else{
-    LEDstrip.fill(LEDstrip.Color(0, 0, 255));
+    LEDstrip.fill(LEDstrip.Color(0, 0, 255)); //Blue
     LEDstrip.show();
   }
 }
 
+void displaySameReadingLCD(void){
+    lcd.setCursor(0, 3);
+    lcd.print("Same as previous");
+    delay(500);
+    lcd.setCursor(0, 3);
+    lcd.print("                    ");
+    delay(500);
+    lcd.setCursor(0, 3);
+    lcd.print("Same as previous");
+}
+
 void displaySameReadingLED(void){
   for(int j=0; j<5; j++){
-    for(int i=0; i<BRIGHTNESS; i++){ //DIM
+    for(int i=0; i<BRIGHTNESS; i++){ //DIM LEDS
       LEDstrip.setBrightness(BRIGHTNESS-i);
       LEDstrip.show();
-      delay(10);
+      delay(8);
     }
     
-    delay(10);
+    delay(8);
     
-    for(int i=1; i<=BRIGHTNESS;i++){ //BRIGHTEN
+    for(int i=1; i<=BRIGHTNESS;i++){ //BRIGHTEN LEDs
       LEDstrip.setBrightness(i);
       LEDstrip.show();
-      delay(10);
+      delay(8);
     }
   }
+}
+
+boolean getBit(uint16_t b, uint8_t n){
+  uint16_t mask = 1<<n;
+  return b & mask;
 }
