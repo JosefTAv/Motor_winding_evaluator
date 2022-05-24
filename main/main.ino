@@ -54,8 +54,8 @@ void initLCD();
 void initHallSensors(void);
 void initLEDs(void);
 uint16_t readHallSensors(void);
-boolean evaluateMotor(uint16_t reading, String &s);
-void displayNewReadingLCD(boolean comboFound, uint16_t reading, String combinationName);
+boolean evaluateMotor(uint16_t reading, char* s);
+void displayNewReadingLCD(boolean comboFound, uint16_t reading, char* combinationName);
 void displayNewReadingLED(boolean comboFound, uint16_t reading);
 void displaySameReadingLCD(void);
 void displaySameReadingLED(void);
@@ -88,14 +88,17 @@ void loop() {
     digitalWrite(IN1, LOW);
     digitalWrite(IN2, LOW);
   }*/
+  Serial.println(digitalRead(ENABLE_PIN));
   if (activated) {
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, HIGH);
     delay(2000);
     //uint16_t reading = combinations[k]; //test value for use without the hall sensors
     uint16_t reading = readHallSensors();
     
     if(reading!=oldReading){
       oldReading=reading;
-      String combinationName = "";
+      char combinationName[100];
       boolean comboFound = evaluateMotor(reading, combinationName);
       comboFound = true; //for testing
       displayNewReadingLCD(comboFound, reading, combinationName);
@@ -127,7 +130,9 @@ void initLCD(void){
 
 void initHallSensors(void) {
   for (int i = FIRST_HALL_SENSOR_PIN; i <= 44 /*NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN*/; i+=2) { //MSB first
+ #ifdef DEBUG
     Serial.println(i);
+ #endif
     pinMode(i, INPUT_PULLUP);
   }
 }
@@ -136,13 +141,11 @@ void initLEDs(void){
   LEDstrip.begin();
   LEDstrip.setBrightness(BRIGHTNESS);
   LEDstrip.fill(LEDstrip.Color(255, 255, 255)); //Yellow
-  LEDstrip.show(); // Initialize all pixels to 'off'
+  LEDstrip.show();
 }
 
 void enableSignalISR(void) {
   activated = true;
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, HIGH);
 }
 
 uint16_t readHallSensors(void) {
@@ -151,24 +154,24 @@ uint16_t readHallSensors(void) {
   for (int i = FIRST_HALL_SENSOR_PIN, j = NB_HALL_SENSORS - 1 ; i <= 44; i+=2, j--) { //MSB first
     reading |= (digitalRead(i) << j); // each reading is a single bit, the bit shifting enables this
   }
-//#ifdef DEBUG
+#ifdef DEBUG
   Serial.print("reading = ");
   Serial.println(reading, BIN);
-//#endif
+#endif
   return reading;
 }
 
-boolean evaluateMotor(uint16_t reading, String &s) {
+boolean evaluateMotor(uint16_t reading, char* s) {
   bool found = false; //true if the reading corresponds to a known configuration
 
   for (int i = 0; i < sizeof(combinations) / 2; i++) {
 #ifdef DEBUG
     Serial.print(reading, BIN);
-    Serial.print("==");
+    Serial.print(" =? ");
     Serial.println((combinations[i]), BIN);
 #endif
     if (reading == combinations[i]) {
-      s = combinationNames[i];
+      strcpy(s, combinationNames[i].c_str());
 #ifdef DEBUG
       Serial.println(s);
 #endif
@@ -176,31 +179,33 @@ boolean evaluateMotor(uint16_t reading, String &s) {
     }
   }
 
-  s = "Not found"; // only arrive here if no known configuration is found
+  strcpy(s, "Not Found"); // only arrive here if no known configuration is found
 #ifdef DEBUG
   Serial.println(s);
 #endif
   return false;
 }
 
-void displayNewReadingLCD(boolean comboFound, uint16_t reading, String combinationName) {
+void displayNewReadingLCD(boolean comboFound, uint16_t reading, char* combinationName) {
   lcd.clear();
   lcd.home();
-  lcd.print("State: " + combinationName);
+   lcd.print("State: ");
+  lcd.print(combinationName);
+
   lcd.setCursor(0, 1);
   if(comboFound){
     lcd.print("Poles: ");
-    for(int i=0; i < NB_HALL_SENSORS; i++)
+    for(int i=NB_HALL_SENSORS-1; i >= 0; i--)
       getBit(reading, i) ? lcd.write(0) : lcd.write(1);
 
-    lcd.setCursor(7, 2);
+    lcd.setCursor(7, 2); //align with polarities
     reading ^= combinations[CORRECT];
-    for(int i=0; i < NB_HALL_SENSORS; i++){
+    for(int i=NB_HALL_SENSORS-1; i >= 0; i--){
       getBit(reading, i) ? lcd.write(2) : lcd.write(3); //Negated because with xor 1 means the values are different
     }
   }
   else{
-    lcd.print("- Please try again -");
+    //lcd.print("- Please try again -");
   }
   //if true
   //1. GOOD OR BAD
