@@ -16,4 +16,6 @@
 
 #define BUZZER_PIN 10
 
+#define CS_SD 58
+
 #endif

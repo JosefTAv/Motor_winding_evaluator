@@ -4,6 +4,7 @@
 
 LiquidCrystal_I2C lcd(0x27, 20, 4); // set the LCD address to 0x27 for a 16 chars and 2 line 
 Adafruit_NeoPixel LEDstrip(NB_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800); //12 = NB_HALL_SENSORS
+uint16_t nbMeasurements = 0;
 
 /*******CONSTANTS*******/
 //Known polarity combinations
@@ -123,6 +124,21 @@ void initLEDs(void){
 void initBuzzer(void){
   pinMode(BUZZER_PIN, OUTPUT);
 }
+
+void initSD(void){
+  if (!SD.begin(CS_SD)) {
+    Serial.println("Card failed, or not present");
+    // don't do anything more:
+    while (1);
+  }
+  Serial.println("card initialized.");
+  File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
+  if (logFile){  
+      String header = "No., Time, measurement, compared with correct, winding configuration"; //These will be the headers for your excel file, CHANGE "" to whatevr headers you would like to use
+      logFile.println(header);
+      logFile.close();
+  }
+}
 /******Initialisation functions*******/
 
 /******Loop functions******/
@@ -232,7 +248,7 @@ void displaySameReadingLCD(void){
     lcd.print("Same as previous");
     delay(500);
     lcd.setCursor(0, 3);
-    lcd.print("                    ");
+    lcd.print("                    "); //clear line
     delay(500);
     lcd.setCursor(0, 3);
     lcd.print("Same as previous");
@@ -274,6 +290,29 @@ void buzzerIncorrect(void){
       delay(20);
     }
   }
+}
+
+void writeToSD(unsigned long t, boolean comboFound, uint16_t reading, char* combinationName){
+  File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
+  if (logFile){
+      if(!comboFound){
+          combinationName = "Not found";
+          reading = -1;
+      }
+      logFile.println(String(nbMeasurements) + ","
+                      + String(t) + ","
+                      + String(reading) + ","
+                      + String(~(reading ^= combinations[CORRECT])) + ","
+                      + combinationName);
+      logFile.close();
+      //For debugging purposes
+      String s = (String(nbMeasurements) + ","
+                      + String(t) + ","
+                      + String(reading) + ","
+                      + String(~(reading ^= combinations[CORRECT])) + ","
+                      + combinationName);
+      Serial.println(s);
+    }
 }
 /******Loop functions******/
 

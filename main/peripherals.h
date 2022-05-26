@@ -4,6 +4,8 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_NeoPixel.h>
+#include <SPI.h>
+#include <SD.h>
 
 inline bool getBit(uint16_t b, uint8_t n) __attribute__((always_inline)); //inline in order to improve speed
 
@@ -13,6 +15,7 @@ void initLCD(void);
 void initHallSensors(void);
 void initLEDs(void);
 void initBuzzer(void);
+void initSD(void);
 /******Initialisation functions*******/
 
 /******Loop functions******/
@@ -25,7 +28,7 @@ boolean evaluateMotor(uint16_t reading, char* s);
 void displayNewReadingLCD(boolean comboFound, uint16_t reading, char* combinationName);
 void displayNewReadingLED(boolean comboFound, uint16_t reading);
 
-void displaySameReadingLCD(void);
+void displaySameReadingLCD(void); //blink screen with "Same as previous"
 void displaySameReadingLED(void);
 
 void buzzerCorrect(void);
