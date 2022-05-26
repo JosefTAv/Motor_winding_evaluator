@@ -1,2 +1,2 @@
 # Motor winding evaluator
-This contains the code for my final year bachelor project which aims to verifiy the windings of a motor by observing the magnetic poles of the motor when a certain amount of current is pulsed.
+This contains the code for my final year bachelor project which aims to verifiy the windings of a motor by observing the polarity of the magnetic poles of the motor between each rotor when a certain amount of current is pulsed. A correctly wound motor will produce a certain sequence of poles. The incorrectly wound rotors can be detected based on which poles are inverted or out of sequence.
