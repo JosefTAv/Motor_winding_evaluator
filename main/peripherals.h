@@ -23,10 +23,10 @@ void relaysOn(void);
 void relaysOff(void);
 
 uint16_t readHallSensors(void);
-boolean evaluateMotor(uint16_t reading, char* s);
+uint16_t evaluateMotor(uint16_t reading);
 
-void displayNewReadingLCD(boolean comboFound, uint16_t reading, char* combinationName);
-void displayNewReadingLED(boolean comboFound, uint16_t reading);
+void displayNewReadingLCD(uint16_t comboIndex, uint16_t reading);
+void displayNewReadingLED(uint16_t comboIndex, uint16_t reading);
 
 void displaySameReadingLCD(void); //blink screen with "Same as previous"
 void displaySameReadingLED(void);
@@ -34,7 +34,7 @@ void displaySameReadingLED(void);
 void buzzerCorrect(void);
 void buzzerIncorrect(void);
 
-void writeToSD(unsigned long t, boolean comboFound, uint16_t reading, char* combinationName);
+void writeToSD(unsigned long t, uint16_t comboIndex, uint16_t reading);
 /******Loop functions******/
 
 #endif

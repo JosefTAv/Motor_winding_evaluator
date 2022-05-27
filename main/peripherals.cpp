@@ -40,7 +40,7 @@ String combinationNames[] = {
   "A1BC2inv", "A2BC2inv", "ABC2inv",  "Cinv", "A1Cinv",
   "A2Cinv", "ACinv",  "B1Cinv", "A1B1Cinv", "A2B1Cinv",
   "AB1Cinv",  "B2Cinv", "A1B2Cinv", "A2B2Cinv", "AB2Cinv",
-  "BCinv",  "A1BCinv",  "A2BCinv",  "ABCinv"
+  "BCinv",  "A1BCinv",  "A2BCinv",  "ABCinv", "Not found"
 };
 
 byte upArrow[] = {
@@ -86,6 +86,8 @@ byte tick[] = {
   0b01000,
   0b00000
 };
+
+#define nbCombinations (sizeof(combinations)/sizeof(combinations[0]) - 1
 /*******CONSTANTS*******/
 
 /******Initialisation functions*******/
@@ -165,39 +167,37 @@ uint16_t readHallSensors(void) {
   return reading;
 }
 
-boolean evaluateMotor(uint16_t reading, char* s) {
-  bool found = false; //true if the reading corresponds to a known configuration
+uint16_t evaluateMotor(uint16_t reading) {
 
-  for (int i = 0; i < sizeof(combinations) / 2; i++) {
+  for (int i = 0; i < nbCombinations - 1; i++) {
 #ifdef DEBUG
     Serial.print(reading, BIN);
     Serial.print(" =? ");
     Serial.println((combinations[i]), BIN);
 #endif
     if (reading == combinations[i]) {
-      strcpy(s, combinationNames[i].c_str());
+      //strcpy(s, combinationNames[i].c_str());
+      return i; //index of correct combination
 #ifdef DEBUG
       Serial.println(s);
 #endif
-      return true;
     }
   }
 
-  strcpy(s, "Not Found"); // only arrive here if no known configuration is found
 #ifdef DEBUG
   Serial.println(s);
 #endif
-  return false;
+  return nbCombinations; //No correponding combination found
 }
 
-void displayNewReadingLCD(boolean comboFound, uint16_t reading, char* combinationName) {
+void displayNewReadingLCD(uint16_t comboIndex, uint16_t reading) {
   lcd.clear();
   lcd.home();
-   lcd.print("State: ");
-  lcd.print(combinationName);
+  lcd.print("State: ");
+  lcd.print(combinationNames[comboIndex]);
 
   lcd.setCursor(0, 1);
-  if(comboFound){
+  if(comboIndex >= 0){
     lcd.print("Poles: ");
     for(int i=NB_HALL_SENSORS-1; i >= 0; i--)
       getBit(reading, i) ? lcd.write(0) : lcd.write(1);
@@ -221,11 +221,11 @@ void displayNewReadingLCD(boolean comboFound, uint16_t reading, char* combinatio
   //2. "No corresponding combination found"
 }
 
-void displayNewReadingLED(boolean comboFound, uint16_t reading){
+void displayNewReadingLED(uint16_t comboIndex, uint16_t reading){
   //comboFound=true; //Just for testing
-  reading ^= combinations[0]; //Find incorrect windings: 1 where the values are different ie. wrong
+  reading ^= combinations[CORRECT]; //Find incorrect windings: 1 where the values are different ie. wrong
   LEDstrip.clear();
-  if(comboFound){
+  if(comboIndex >=0){
     for(int i=NB_HALL_SENSORS-1; i >= 0;i--){ //Start from MSb -> LSb
       uint32_t colour = LEDstrip.Color(0, 255, 0); //Green
       
@@ -273,45 +273,41 @@ void displaySameReadingLED(void){
 }
 
 void buzzerCorrect(void){
-  int melodyOn[] = {NOTE_C5, NOTE_E5, NOTE_G5};
-  int durationOn = 200;
+  int melodyGood[] = {NOTE_C5, NOTE_E5, NOTE_G5};
+  int duration = 200;
   for (int thisNote = 0; thisNote < 3; thisNote++) {
-    tone(BUZZER_PIN, melodyOn[thisNote], durationOn);
+    tone(BUZZER_PIN, melodyGood[thisNote], duration);
     delay(200);
   }
 }
 void buzzerIncorrect(void){
-  ////Play 'OFF' Sound
-  int melodyOff[] = {NOTE_CS4, NOTE_C5};
-  int durationOff = 200;
+  int melodyBad[] = {NOTE_CS4, NOTE_C5};
+  int duration = 200;
   for(int j = 0; j < 3; j++){
     for (int thisNote = 0; thisNote < 2; thisNote++) {
-      tone(BUZZER_PIN, melodyOff[thisNote], durationOff);
+      tone(BUZZER_PIN, melodyBad[thisNote], duration);
       delay(20);
     }
   }
 }
 
-void writeToSD(unsigned long t, boolean comboFound, uint16_t reading, char* combinationName){
+void writeToSD(unsigned long t, uint16_t comboIndex, uint16_t reading){
   File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
   if (logFile){
-      if(!comboFound){
-          combinationName = "Not found";
-          reading = -1;
-      }
       logFile.println(String(nbMeasurements) + ","
                       + String(t) + ","
                       + String(reading) + ","
                       + String(~(reading ^= combinations[CORRECT])) + ","
-                      + combinationName);
+                      + combinationNames[comboIndex]);
       logFile.close();
       //For debugging purposes
       String s = (String(nbMeasurements) + ","
                       + String(t) + ","
                       + String(reading) + ","
                       + String(~(reading ^= combinations[CORRECT])) + ","
-                      + combinationName);
+                      + combinationNames[comboIndex]);
       Serial.println(s);
+      nbMeasurements++;
     }
 }
 /******Loop functions******/

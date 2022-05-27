@@ -24,20 +24,21 @@ void setup() {
 uint16_t oldReading = 0;
 
 void loop() {
-  if (activated && digitalRead(ENABLE_PIN) == 0) {
-    relaysOn();
-    delay(2000);
+  if (activated) {
+    relaysOn(); //Allow current to flow to create magnetic field
+    delay(2000); //Wait for relays to turn on before making a measurement
     
     uint16_t reading = readHallSensors();
     if(reading!=oldReading){
       oldReading=reading;
-      char combinationName[100];
-      boolean comboFound = evaluateMotor(reading, combinationName);
-      displayNewReadingLCD(comboFound, reading, combinationName);
-      displayNewReadingLED(comboFound, reading);
-      (combinationName == "Correct") ? buzzerCorrect() : buzzerIncorrect(); 
+      uint16_t comboIndex = evaluateMotor(reading);
+      displayNewReadingLCD(comboIndex, reading);
+      displayNewReadingLED(comboIndex, reading);
+      (comboIndex == 0) ? buzzerCorrect() : buzzerIncorrect(); 
+      writeToSD(millis(), comboIndex, reading);
     }
     else{
+      writeToSD(millis(), comboIndex, reading);
       displaySameReadingLCD();
       displaySameReadingLED();
     }
@@ -48,5 +49,6 @@ void loop() {
 }
 
 void enableSignalISR(void) {
-  activated = true;
+  if(digitalRead(ENABLE_PIN) == 0) //Check that the downward flank is not noise
+    activated = true;
 }
