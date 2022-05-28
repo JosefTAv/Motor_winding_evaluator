@@ -9,6 +9,7 @@
 
 #define FIRST_HALL_SENSOR_PIN 22
 #define NB_HALL_SENSORS 12
+#define LAST_HALL_SENSOR_PIN 44
 
 #define LED_PIN 10
 #define NB_LEDS 12

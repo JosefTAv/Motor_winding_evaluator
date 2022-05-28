@@ -9,7 +9,7 @@ uint16_t nbMeasurements = 0;
 /*******CONSTANTS*******/
 //Known polarity combinations
 //Each bit represents a polarity: 1-> N pole, 0-> S pole
-//LSb represents the measurement of the last hall sensor
+//LSb represents the measurement of the last hall sensor = 
 uint16_t combinations[] = {
   0b101001010110, 0b011001010110, 0b101001100110, 0b011001100110, 0b101001010101,
   0b011001010101, 0b101001100101, 0b011001100101, 0b101010010110, 0b011010010110,
@@ -87,7 +87,7 @@ byte tick[] = {
   0b00000
 };
 
-#define nbCombinations (sizeof(combinations)/sizeof(combinations[0]) - 1
+uint16_t nbCombinations = LENGTH(combinations); //depends only on array 'combinations', therefore adaptable for different motor configurations
 /*******CONSTANTS*******/
 
 /******Initialisation functions*******/
@@ -108,7 +108,7 @@ void initLCD(void){
 }
 
 void initHallSensors(void) {
-  for (int i = FIRST_HALL_SENSOR_PIN; i <= 44 /*NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN*/; i+=2) { //MSB first
+  for (int i = FIRST_HALL_SENSOR_PIN; i <= LAST_HALL_SENSOR_PIN /*NB_HALL_SENSORS + FIRST_HALL_SENSOR_PIN*/; i+=2) { //MSB first
  #ifdef DEBUG
     Serial.println(i);
  #endif
@@ -135,10 +135,11 @@ void initSD(void){
   }
   Serial.println("card initialized.");
   File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
-  if (logFile){  
-      String header = "No., Time, measurement, compared with correct, winding configuration"; //These will be the headers for your excel file, CHANGE "" to whatevr headers you would like to use
-      logFile.println(header);
-      logFile.close();
+  if (logFile){
+    //These will be the headers for your excel file, CHANGE "" to whatever headers you would like to use  
+    String header = "No., Time, Correct, Measurement, Correct poles, Winding type"; 
+    logFile.println(header);
+    logFile.close();
   }
 }
 /******Initialisation functions*******/
@@ -157,7 +158,7 @@ void relaysOff(void){
 uint16_t readHallSensors(void) {
   uint16_t reading = 0;
 
-  for (int i = FIRST_HALL_SENSOR_PIN, j = NB_HALL_SENSORS - 1 ; i <= 44; i+=2, j--) { //MSB first
+  for (int i = FIRST_HALL_SENSOR_PIN, j = NB_HALL_SENSORS - 1 ; i <= LAST_HALL_SENSOR_PIN; i+=2, j--) { //MSB first
     reading |= (digitalRead(i) << j); // each reading is a single bit, the bit shifting enables this
   }
 #ifdef DEBUG
@@ -190,21 +191,21 @@ uint16_t evaluateMotor(uint16_t reading) {
   return nbCombinations; //No correponding combination found
 }
 
-void displayNewReadingLCD(uint16_t comboIndex, uint16_t reading) {
+void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading) {
   lcd.clear();
   lcd.home();
   lcd.print("State: ");
   lcd.print(combinationNames[comboIndex]);
 
   lcd.setCursor(0, 1);
-  if(comboIndex >= 0){
+  if(comboIndex >= 0){ //print raw pole readings
     lcd.print("Poles: ");
     for(int i=NB_HALL_SENSORS-1; i >= 0; i--)
       getBit(reading, i) ? lcd.write(0) : lcd.write(1);
 
     lcd.setCursor(7, 2); //align with polarities
     reading ^= combinations[CORRECT];
-    for(int i=NB_HALL_SENSORS-1; i >= 0; i--){
+    for(int i=NB_HALL_SENSORS-1; i >= 0; i--){ //print whether poles are correct or not
       getBit(reading, i) ? lcd.write(2) : lcd.write(3); //Negated because with xor 1 means the values are different
     }
   }
@@ -221,8 +222,7 @@ void displayNewReadingLCD(uint16_t comboIndex, uint16_t reading) {
   //2. "No corresponding combination found"
 }
 
-void displayNewReadingLED(uint16_t comboIndex, uint16_t reading){
-  //comboFound=true; //Just for testing
+void displayNewReadingLED(uint8_t comboIndex, uint16_t reading){
   reading ^= combinations[CORRECT]; //Find incorrect windings: 1 where the values are different ie. wrong
   LEDstrip.clear();
   if(comboIndex >=0){
@@ -291,17 +291,19 @@ void buzzerIncorrect(void){
   }
 }
 
-void writeToSD(unsigned long t, uint16_t comboIndex, uint16_t reading){
+void writeToSD(unsigned long t, uint8_t comboIndex, uint16_t reading){
   File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
   if (logFile){
       logFile.println(String(nbMeasurements) + ","
-                      + String(t) + ","
-                      + String(reading) + ","
-                      + String(~(reading ^= combinations[CORRECT])) + ","
-                      + combinationNames[comboIndex]);
+                      + String(comboIndex == CORRECT) + ","                 //Is the motor completely correct?
+                      + String(t) + ","                                     //Time
+                      + String(reading) + ","                               //Raw measurement  
+                      + String(~(reading ^= combinations[CORRECT])) + ","   //Correct/incorrect poles
+                      + combinationNames[comboIndex]);                      //Winding type
       logFile.close();
       //For debugging purposes
       String s = (String(nbMeasurements) + ","
+                      + String(comboIndex == CORRECT) + "," 
                       + String(t) + ","
                       + String(reading) + ","
                       + String(~(reading ^= combinations[CORRECT])) + ","
