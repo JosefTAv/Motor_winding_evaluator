@@ -13,7 +13,6 @@ void setup() {
 
   //initialise IO peripherals
   bool SDWorking = initSD();
-  Serial.println(SDWorking);
   initLCD(SDWorking);
   initHallSensors();
   initLEDs();
@@ -27,7 +26,7 @@ uint16_t k = 0;
 
 void loop() {
   if (activated) {
-    delay(50); //Check that signal is really LOW
+    delay(50); //Check that signal really is LOW
     if(digitalRead(ENABLE_PIN) == 0){
       displayStartMeasure();
       relaysOn(); //Allow current to flow to create magnetic field
@@ -49,7 +48,7 @@ void loop() {
       }
       (comboIndex == CORRECT) ? buzzerCorrect() : buzzerIncorrect(); 
       writeToSD(measureTime, comboIndex, measurement);
-      delay(10); // When the relays turn off, they create a bounce in the signal which activates measurement again and never stops
+      delay(10); // When the relays turn off, they create a bounce in the signal which activates measurement again and never stops: wait for bounce then continue
       activated = false;
       k++;
     }
