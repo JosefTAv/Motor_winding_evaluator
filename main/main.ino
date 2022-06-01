@@ -12,7 +12,9 @@ void setup() {
   delay(50);
 
   //initialise IO peripherals
-  initLCD();
+  bool SDWorking = initSD();
+  Serial.println(SDWorking);
+  initLCD(SDWorking);
   initHallSensors();
   initLEDs();
   initRelays();
@@ -21,39 +23,42 @@ void setup() {
 
 uint16_t oldMeasurement = 0;
 uint8_t comboIndex = nbCombinations;
+uint16_t k = 0;
 
 void loop() {
   if (activated) {
-    relaysOn(); //Allow current to flow to create magnetic field
-    delay(2000); //Wait for relays to turn on before making a measurement
-    
-    uint16_t measurement = readHallSensors();
-    if(measurement != oldMeasurement){
-      comboIndex = evaluateMotor(measurement);
-      displayNewReadingLCD(comboIndex, measurement);
-      displayNewReadingLED(comboIndex, measurement);
-      (comboIndex == CORRECT) ? buzzerCorrect() : buzzerIncorrect(); 
-      writeToSD(millis(), comboIndex, measurement);
-      
-      oldMeasurement=measurement;
-    }
-    else{
-      writeToSD(millis(), comboIndex, measurement);
-      displaySameReadingLCD();
-      displaySameReadingLED();
-    }
+    delay(50); //Check that signal is really LOW
+    if(digitalRead(ENABLE_PIN) == 0){
+      displayStartMeasure();
+      relaysOn(); //Allow current to flow to create magnetic field
+      delay(1200); //Wait for relays to turn on before making a measurement, could be longer (than 1000) because it doesn't reach full current yet. But the measurements look good
 
-    relaysOff();
-    activated = false;
+      unsigned long measureTime = millis();
+      uint16_t measurement = readHallSensors();
+      relaysOff();
+      if(measurement != oldMeasurement){
+        comboIndex = evaluateMotor(measurement);
+        displayNewReadingLCD(comboIndex, measurement);
+        displayNewReadingLED(comboIndex, measurement);
+        
+        oldMeasurement=measurement;
+      }
+      else{
+        displaySameReadingLCD();
+        displaySameReadingLED();
+      }
+      (comboIndex == CORRECT) ? buzzerCorrect() : buzzerIncorrect(); 
+      writeToSD(measureTime, comboIndex, measurement);
+      delay(10); // When the relays turn off, they create a bounce in the signal which activates measurement again and never stops
+      activated = false;
+      k++;
+    }
   }
 }
 
 void enableSignalISR(void) {
-    if(digitalRead(ENABLE_PIN) == 0) { //Check that the downward flank is not noise
-    unsigned long start = millis();
-    while(millis() - start < 200) //For testing length of tie required to determine proper activations
-      Serial.println(digitalRead(ENABLE_PIN));
-    activated = true;
+    if(digitalRead(ENABLE_PIN) == 0) { //Check that the downward flank is not noise, check thrice for bouncing
+      activated = true;
   }
 }
 

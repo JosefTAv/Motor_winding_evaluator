@@ -19,11 +19,11 @@ extern uint16_t nbCombinations;
 
 /******Initialisation functions*******/
 void initRelays(void);
-void initLCD(void);
+bool initSD(void);
+void initLCD(bool SDWorking);
 void initHallSensors(void);
 void initLEDs(void);
 void initBuzzer(void);
-void initSD(void);
 /******Initialisation functions*******/
 
 /******Loop functions******/
@@ -33,6 +33,7 @@ void relaysOff(void);
 uint16_t readHallSensors(void);
 uint16_t evaluateMotor(uint16_t reading);
 
+void displayStartMeasure(void);
 void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading);
 void displayNewReadingLED(uint8_t comboIndex, uint16_t reading);
 

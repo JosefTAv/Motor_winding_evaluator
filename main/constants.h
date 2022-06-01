@@ -15,8 +15,8 @@
 #define NB_LEDS 12
 #define BRIGHTNESS 20
 
-#define BUZZER_PIN 10
+#define BUZZER_PIN 9
 
-#define CS_SD 58
+#define CS_SD 53
 
 #endif

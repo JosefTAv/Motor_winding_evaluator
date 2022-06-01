@@ -94,17 +94,22 @@ uint16_t nbCombinations = LENGTH(combinations); //depends only on array 'combina
 void initRelays(void){
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
+  relaysOff();
 }
 
-void initLCD(void){
+void initLCD(bool SDWorking){
   lcd.init();                     
   lcd.backlight();
   lcd.print("State:no measurement"); 
+  lcd.setCursor(0, 1);
   lcd.print("Awaiting activation");
   lcd.createChar(0, upArrow);
   lcd.createChar(1, downArrow);
   lcd.createChar(2, cross);
   lcd.createChar(3, tick);
+  if(!SDWorking)
+    lcd.setCursor(0, 3);
+    lcd.print("   ** SD error **");
 }
 
 void initHallSensors(void) {
@@ -119,7 +124,8 @@ void initHallSensors(void) {
 void initLEDs(void){
   LEDstrip.begin();
   LEDstrip.setBrightness(BRIGHTNESS);
-  LEDstrip.fill(LEDstrip.Color(255, 255, 255)); //Yellow
+  LEDstrip.fill(LEDstrip.Color(255, 255, 255)); //White
+  LEDstrip.setPixelColor(0, LEDstrip.Color(0, 117, 255)); //Set first pixel to Blue to show start
   LEDstrip.show();
 }
 
@@ -127,11 +133,10 @@ void initBuzzer(void){
   pinMode(BUZZER_PIN, OUTPUT);
 }
 
-void initSD(void){
+bool initSD(void){
   if (!SD.begin(CS_SD)) {
     Serial.println("Card failed, or not present");
-    // don't do anything more:
-    while (1);
+    return false;
   }
   Serial.println("card initialized.");
   File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
@@ -140,19 +145,21 @@ void initSD(void){
     String header = "No., Time, Correct, Measurement, Correct poles, Winding type"; 
     logFile.println(header);
     logFile.close();
+    return true;
   }
+  return false;
 }
 /******Initialisation functions*******/
 
 /******Loop functions******/
 void relaysOn(void){
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, HIGH);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
 }
 
 void relaysOff(void){
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, HIGH);
 }
 
 uint16_t readHallSensors(void) {
@@ -191,6 +198,12 @@ uint16_t evaluateMotor(uint16_t reading) {
   return nbCombinations; //No correponding combination found
 }
 
+void displayStartMeasure(void){
+  lcd.setCursor(0, 3);
+  lcd.print("Measuring poles  ");
+  //delay(500);
+}
+
 void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading) {
   lcd.clear();
   lcd.home();
@@ -208,6 +221,8 @@ void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading) {
     for(int i=NB_HALL_SENSORS-1; i >= 0; i--){ //print whether poles are correct or not
       getBit(reading, i) ? lcd.write(2) : lcd.write(3); //Negated because with xor 1 means the values are different
     }
+    lcd.setCursor(0, 3);
+    lcd.print("         ");
   }
   else{
     //lcd.print("- Please try again -");
@@ -282,8 +297,8 @@ void buzzerCorrect(void){
 }
 void buzzerIncorrect(void){
   int melodyBad[] = {NOTE_CS4, NOTE_C5};
-  int duration = 200;
-  for(int j = 0; j < 3; j++){
+  int duration = 300;
+  for(int j = 0; j < 4; j++){
     for (int thisNote = 0; thisNote < 2; thisNote++) {
       tone(BUZZER_PIN, melodyBad[thisNote], duration);
       delay(20);
