@@ -3,6 +3,7 @@
 ## Introduction
 
 This contains the code for my **final year bachelor project** which aims to verifiy the windings of a motor. This is done by measuring the polarity of the magnetic poles of the motor between each rotor when a supplied a certain amount of current. A correctly wound motor will produce a specific sequence of magnetic pole directions. An incorrectly wound rotor can be detected based on which poles do not coincide with this sequence.
+
 Notably, the machine considers the motor to be correct when the **polarities are in this order**: &uarr; &darr; &uarr; &darr; &darr; &uarr; &darr; &uarr; &darr; &uarr; &uarr; &darr; 
 
 ### Input ports
@@ -33,9 +34,9 @@ The motor can be evaluated in one of two ways:
 1. A measurement can also be activated by a downward flank through the external controller port.
 
 ### Feedback
-Once activated, the motor will be supplied current and the direction of the poles between each rotor will be measured. The poles will be measured anti-clockwise from A1 until it makes a full circle. After this, the lcd will display each of these polarities and whether they are correct or not with either a ✓ (for correct ones) or a ✗. The leftmost pole on the lcd represents the first one: A1. The device will then check the combinations of these poles to analyse which windings are inverted and print this under the field &quot;state:&quot;. The LEDs will also go green if the pole direction is correct and red if incorrect. The buzzer will have a distinct sound for when the poles are entirely correct and for when they are not.
+Once activated, the motor will be supplied current and the direction of the poles between each rotor will be measured. The poles will be measured anti-clockwise from A1 until it makes a full circle. After this, the lcd will display each of these polarities and whether they are correct or not with either a ✓ (for correct ones) or a ✗. The leftmost pole on the lcd represents the first one: A1. The device will then check the combinations of these poles to analyse which windings are inverted and print this under the field &quot;*state:*&quot;. The LEDs will also go green if the pole direction is correct and red if incorrect. The buzzer will have a distinct sound for when the poles are entirely correct and for when they are not.
 
-In the case where the next measurement is the same as the last, two things will happen. Firstly the lcd will print &quot;same as previous&quot; and secondly the LEDs will blink. Otherwise, the operation will be identical.
+In the case where the next measurement is the same as the last, two things will happen. Firstly the lcd will print &quot;*same as previous*&quot; and secondly the LEDs will blink. Otherwise, the operation will be identical.
 
 Importantly, in every measurement, once it is completed the device will **stop supplying current** to the motor and one of the pins on the connector that goes to the computer will **be pulled down** so as to communicate that the measurement is finished.
 

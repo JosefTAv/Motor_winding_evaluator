@@ -18,5 +18,5 @@
 #define BUZZER_PIN 9
 
 #define CS_SD 53
-
+#define FILENAME "logs" //.csv file
 #endif

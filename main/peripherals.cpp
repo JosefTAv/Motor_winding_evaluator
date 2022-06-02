@@ -107,9 +107,11 @@ void initLCD(bool SDWorking){
   lcd.createChar(1, downArrow);
   lcd.createChar(2, cross);
   lcd.createChar(3, tick);
-  if(!SDWorking)
+  
+  if(!SDWorking){
     lcd.setCursor(0, 3);
     lcd.print("   ** SD error **");
+  }
 }
 
 void initHallSensors(void) {
@@ -133,20 +135,41 @@ void initBuzzer(void){
   pinMode(BUZZER_PIN, OUTPUT);
 }
 
-bool initSD(void){
+String checkFileNamesSD(void){
   if (!SD.begin(CS_SD)) {
-    Serial.println("Card failed, or not present");
-    return false;
+    Serial.println("SD card or not present.");
+    return ""; // don't do anything more:
   }
-  Serial.println("card initialized.");
-  File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
+  
+  String fileName = FILENAME;
+  int len = fileName.length();
+  if(!SD.exists(fileName + ".csv"))
+    return fileName + ".csv";
+    
+  uint8_t i = 0;
+  while(1){
+    if(!SD.exists(fileName + i + ".csv"))
+      return fileName + i + ".csv"; //i is incremented if a file of the same name is detected
+    i++;
+  }
+}
+
+bool initSD(String fileName){
+  if (!SD.begin(CS_SD)) {
+    Serial.println("SD card or not present.");
+    return false; // don't do anything more:
+  }
+  
+  File logFile = SD.open(fileName, FILE_WRITE);
   if (logFile){
     //These will be the headers for your excel file, CHANGE "" to whatever headers you would like to use  
-    String header = "No., Time, Correct, Measurement, Correct poles, Winding type"; 
+    logFile.println("sep=,");
+    String header = "No.,Time,Correct,Measurement,Correct poles,Winding type"; 
     logFile.println(header);
     logFile.close();
     return true;
   }
+  Serial.println("Unable to open.");
   return false;
 }
 /******Initialisation functions*******/
@@ -306,16 +329,19 @@ void buzzerIncorrect(void){
   }
 }
 
-void writeToSD(unsigned long t, uint8_t comboIndex, uint16_t reading){
-  File logFile = SD.open("Motor_eval.csv", FILE_WRITE);
+void writeToSD(String fileName, unsigned long t, uint8_t comboIndex, uint16_t reading){
+  File logFile = SD.open(fileName, FILE_WRITE);
   if (logFile){
-      logFile.println(String(nbMeasurements) + ","
-                      + String(comboIndex == CORRECT) + ","                 //Is the motor completely correct?
-                      + String(t) + ","                                     //Time
-                      + String(reading) + ","                               //Raw measurement  
-                      + String(~(reading ^= combinations[CORRECT])) + ","   //Correct/incorrect poles
-                      + combinationNames[comboIndex]);                      //Winding type
+      logFile.print(String(nbMeasurements) + ","
+                      + String(t) + ","                               //Time
+                      + String(comboIndex == CORRECT) + ",");         //Is the motor completely correct?
+      logFile.print(reading, BIN);                                    //Raw measurement  
+      logFile.print(",");
+      logFile.print(~(reading ^= combinations[CORRECT]), BIN);        //Correct/incorrect poles                           //Raw measurement  
+      logFile.print(",");   
+      logFile.println(combinationNames[comboIndex]);                  //Winding type
       logFile.close();
+      
       //For debugging purposes
       String s = (String(nbMeasurements) + ","
                       + String(comboIndex == CORRECT) + "," 

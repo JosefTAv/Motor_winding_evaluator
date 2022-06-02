@@ -19,7 +19,8 @@ extern uint16_t nbCombinations;
 
 /******Initialisation functions*******/
 void initRelays(void);
-bool initSD(void);
+String checkFileNamesSD(void);
+bool initSD(String fileName);
 void initLCD(bool SDWorking);
 void initHallSensors(void);
 void initLEDs(void);
@@ -43,7 +44,7 @@ void displaySameReadingLED(void);
 void buzzerCorrect(void);
 void buzzerIncorrect(void);
 
-void writeToSD(unsigned long t, uint8_t comboIndex, uint16_t reading);
+void writeToSD(String fileName, unsigned long t, uint8_t comboIndex, uint16_t reading);
 /******Loop functions******/
 
 #endif
