@@ -5,7 +5,7 @@
 
 #define ENABLE_PIN 19
 #define IN2 12 // tiene que cerrar que hay error
-#define IN1 13 // tiene que cerrar cuando ha terminado de medir
+#define IN1 13 // tiene que abrir cuando ha terminado de medir (circula el corriente)
 
 #define FIRST_HALL_SENSOR_PIN 22
 #define NB_HALL_SENSORS 12
@@ -18,5 +18,9 @@
 #define BUZZER_PIN 9
 
 #define CS_SD 53
-#define FILENAME "logs" //.csv file
-#endif
+#define FILENAME "log" //.csv file
+#define HEADER "No.,Time,Correct(BIN),Measurement(BIN),Correct poles(BIN),Winding type"
+#endif 
+
+//Interruptor abajo (a HIGH) -> abre IN2 
+// Memoria el 20 Lunes

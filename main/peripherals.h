@@ -21,15 +21,17 @@ extern uint16_t nbCombinations;
 void initRelays(void);
 String checkFileNamesSD(void);
 bool initSD(String fileName);
-void initLCD(bool SDWorking);
+void initLCD(bool SDWorking, String fileName);
 void initHallSensors(void);
 void initLEDs(void);
 void initBuzzer(void);
 /******Initialisation functions*******/
 
 /******Loop functions******/
-void relaysOn(void);
-void relaysOff(void);
+void motorOn(void);
+void motorOff(void);
+void errorPortOn(void);
+void errorPortOff(void);
 
 uint16_t readHallSensors(void);
 uint16_t evaluateMotor(uint16_t reading);

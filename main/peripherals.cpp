@@ -94,24 +94,28 @@ uint16_t nbCombinations = LENGTH(combinations); //depends only on array 'combina
 void initRelays(void){
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
-  relaysOff();
+  motorOff();
+  errorPortOff();
 }
 
-void initLCD(bool SDWorking){
+void initLCD(bool SDWorking, String fileName){
   lcd.init();                     
   lcd.backlight();
   lcd.print("State:no measurement"); 
   lcd.setCursor(0, 1);
   lcd.print("Awaiting activation");
+  lcd.setCursor(0, 3);
+  if(!SDWorking){
+    lcd.print("   ** SD error **");
+  }
+  else{
+    lcd.print("File: " + fileName);
+  }
+
   lcd.createChar(0, upArrow);
   lcd.createChar(1, downArrow);
   lcd.createChar(2, cross);
   lcd.createChar(3, tick);
-  
-  if(!SDWorking){
-    lcd.setCursor(0, 3);
-    lcd.print("   ** SD error **");
-  }
 }
 
 void initHallSensors(void) {
@@ -156,16 +160,15 @@ String checkFileNamesSD(void){
 
 bool initSD(String fileName){
   if (!SD.begin(CS_SD)) {
-    Serial.println("SD card or not present.");
+    Serial.println("SD card broken or not present.");
     return false; // don't do anything more:
   }
   
   File logFile = SD.open(fileName, FILE_WRITE);
   if (logFile){
     //These will be the headers for your excel file, CHANGE "" to whatever headers you would like to use  
-    logFile.println("sep=,");
-    String header = "No.,Time,Correct,Measurement,Correct poles,Winding type"; 
-    logFile.println(header);
+    logFile.println("sep=,"); 
+    logFile.println(HEADER);
     logFile.close();
     return true;
   }
@@ -175,14 +178,20 @@ bool initSD(String fileName){
 /******Initialisation functions*******/
 
 /******Loop functions******/
-void relaysOn(void){
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, LOW);
+void motorOn(void){
+  digitalWrite(IN2, LOW); //Closed
 }
 
-void relaysOff(void){
-  digitalWrite(IN1, HIGH);
-  digitalWrite(IN2, HIGH);
+void motorOff(void){
+  digitalWrite(IN2, HIGH); //Open
+}
+
+void errorPortOn(void){
+  digitalWrite(IN1, LOW); //Closed
+}
+
+void errorPortOff(void){
+  digitalWrite(IN1, HIGH); //Open
 }
 
 uint16_t readHallSensors(void) {
@@ -199,7 +208,6 @@ uint16_t readHallSensors(void) {
 }
 
 uint16_t evaluateMotor(uint16_t reading) {
-
   for (int i = 0; i < nbCombinations - 1; i++) {
 #ifdef DEBUG
     Serial.print(reading, BIN);
@@ -223,7 +231,7 @@ uint16_t evaluateMotor(uint16_t reading) {
 
 void displayStartMeasure(void){
   lcd.setCursor(0, 3);
-  lcd.print("Measuring poles  ");
+  lcd.print("Measuring poles    ");
   //delay(500);
 }
 
@@ -318,26 +326,40 @@ void buzzerCorrect(void){
     delay(200);
   }
 }
+
+//void buzzerIncorrect(void){
+//  int melodyBad[] = {NOTE_CS4, NOTE_C5};
+//  int duration = 300;
+//  for(int j = 0; j < 4; j++){
+//    for (int thisNote = 0; thisNote < 2; thisNote++) {
+//      tone(BUZZER_PIN, melodyBad[thisNote], duration);
+//      delay(20);
+//    }
+//  }
+//}
+
 void buzzerIncorrect(void){
-  int melodyBad[] = {NOTE_CS4, NOTE_C5};
-  int duration = 300;
-  for(int j = 0; j < 4; j++){
-    for (int thisNote = 0; thisNote < 2; thisNote++) {
-      tone(BUZZER_PIN, melodyBad[thisNote], duration);
-      delay(20);
-    }
+  int melodyGood[] = {NOTE_G4, NOTE_G4};
+  int duration = 200;
+  for (int thisNote = 0; thisNote < 2; thisNote++) {
+    tone(BUZZER_PIN, melodyGood[thisNote], duration);
+    delay(200);
   }
 }
 
 void writeToSD(String fileName, unsigned long t, uint8_t comboIndex, uint16_t reading){
   File logFile = SD.open(fileName, FILE_WRITE);
   if (logFile){
+    uint16_t mask = 0b0000111111111111; //remove the first 4 bits of measurement which correspond to nothing 
+    uint16_t correctPoles = ~(reading ^= combinations[CORRECT]);
+    correctPoles &= mask;
+    
       logFile.print(String(nbMeasurements) + ","
-                      + String(t) + ","                               //Time
+                      + String(t/1000.0) + ","                               //Time
                       + String(comboIndex == CORRECT) + ",");         //Is the motor completely correct?
       logFile.print(reading, BIN);                                    //Raw measurement  
       logFile.print(",");
-      logFile.print(~(reading ^= combinations[CORRECT]), BIN);        //Correct/incorrect poles                           //Raw measurement  
+      logFile.print(correctPoles, BIN);                               //Correct/incorrect poles                           //Raw measurement  
       logFile.print(",");   
       logFile.println(combinationNames[comboIndex]);                  //Winding type
       logFile.close();
