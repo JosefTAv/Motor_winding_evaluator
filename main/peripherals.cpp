@@ -112,10 +112,10 @@ void initLCD(bool SDWorking, String fileName){
     lcd.print("File: " + fileName);
   }
 
-  lcd.createChar(0, upArrow);
-  lcd.createChar(1, downArrow);
-  lcd.createChar(2, cross);
-  lcd.createChar(3, tick);
+  lcd.createChar(UPARROW, upArrow);
+  lcd.createChar(DOWNARROW, downArrow);
+  lcd.createChar(CROSS, cross);
+  lcd.createChar(TICK, tick);
 }
 
 void initHallSensors(void) {
@@ -237,35 +237,29 @@ void displayStartMeasure(void){
 
 void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading) {
   lcd.clear();
-  lcd.home();
-  lcd.print("State: ");
-  lcd.print(combinationNames[comboIndex]);
-
-  lcd.setCursor(0, 1);
-  if(comboIndex >= 0){ //print raw pole readings
-    lcd.print("Poles: ");
-    for(int i=NB_HALL_SENSORS-1; i >= 0; i--)
-      getBit(reading, i) ? lcd.write(0) : lcd.write(1);
-
-    lcd.setCursor(7, 2); //align with polarities
-    reading ^= combinations[CORRECT];
-    for(int i=NB_HALL_SENSORS-1; i >= 0; i--){ //print whether poles are correct or not
-      getBit(reading, i) ? lcd.write(2) : lcd.write(3); //Negated because with xor 1 means the values are different
+  for(int i = 0; i < 3; i++){ //repeat data sending so that the screen is more stable
+    lcd.home();
+    lcd.print("State: ");
+    lcd.print(combinationNames[comboIndex]);
+  
+    lcd.setCursor(0, 1);
+    if(comboIndex >= 0){ //print raw pole readings
+      lcd.print("Poles: ");
+      for(int i=NB_HALL_SENSORS-1; i >= 0; i--)
+        getBit(reading, i) ? lcd.write(UPARROW) : lcd.write(DOWNARROW);
+  
+      lcd.setCursor(7, 2); //align with polarities
+      reading ^= combinations[CORRECT];
+      for(int i=NB_HALL_SENSORS-1; i >= 0; i--){ //print whether poles are correct or not
+        getBit(reading, i) ? lcd.write(CROSS) : lcd.write(TICK); //Negated because with xor 1 means the values are different
+      }
+      lcd.setCursor(0, 3);
+      lcd.print("         ");
     }
-    lcd.setCursor(0, 3);
-    lcd.print("         ");
+    else{
+      //lcd.print("- Please try again -");
+    }
   }
-  else{
-    //lcd.print("- Please try again -");
-  }
-  //if true
-  //1. GOOD OR BAD
-  //2. COMBONAME
-  //3. RAW POLE READS
-  //4. WHICH POLES TO SWITCH (Using arrows?)
-  //else
-  //1. big X flashing
-  //2. "No corresponding combination found"
 }
 
 void displayNewReadingLED(uint8_t comboIndex, uint16_t reading){
@@ -355,11 +349,11 @@ void writeToSD(String fileName, unsigned long t, uint8_t comboIndex, uint16_t re
     correctPoles &= mask;
     
       logFile.print(String(nbMeasurements) + ","
-                      + String(t/1000.0) + ","                               //Time
+                      + String(t/1000.0) + ","                        //Time
                       + String(comboIndex == CORRECT) + ",");         //Is the motor completely correct?
       logFile.print(reading, BIN);                                    //Raw measurement  
       logFile.print(",");
-      logFile.print(correctPoles, BIN);                               //Correct/incorrect poles                           //Raw measurement  
+      logFile.print(correctPoles, BIN);                               //Correct/incorrect poles
       logFile.print(",");   
       logFile.println(combinationNames[comboIndex]);                  //Winding type
       logFile.close();

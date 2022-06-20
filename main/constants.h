@@ -3,6 +3,11 @@
 
 #define CORRECT 0
 
+#define UPARROW 0
+#define DOWNARROW 1
+#define CROSS 2
+#define TICK 3
+
 #define ENABLE_PIN 19
 #define IN2 12 // tiene que cerrar que hay error
 #define IN1 13 // tiene que abrir cuando ha terminado de medir (circula el corriente)
