@@ -21,7 +21,8 @@ extern uint16_t nbCombinations;
 void initRelays(void);
 String checkFileNamesSD(void);
 bool initSD(String fileName);
-void initLCD(bool SDWorking, String fileName);
+void initLCD(void);
+void initMessageLCD(bool SDWorking, String fileName);
 void initHallSensors(void);
 void initLEDs(void);
 void initBuzzer(void);
@@ -37,10 +38,11 @@ uint16_t readHallSensors(void);
 uint16_t evaluateMotor(uint16_t reading);
 
 void displayStartMeasure(void);
+void displayEndMeasure(void);
 void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading);
 void displayNewReadingLED(uint8_t comboIndex, uint16_t reading);
 
-void displaySameReadingLCD(void); //blink screen with "Same as previous"
+void displaySameReadingLCD(uint8_t comboIndex, uint16_t reading); //blink screen with "Same as previous"
 void displaySameReadingLED(void);
 
 void buzzerCorrect(void);

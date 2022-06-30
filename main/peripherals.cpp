@@ -98,9 +98,20 @@ void initRelays(void){
   errorPortOff();
 }
 
-void initLCD(bool SDWorking, String fileName){
+void initLCD(void){
+  pinMode(LCD_POWER, INPUT_PULLUP);
+  digitalWrite(LCD_POWER, HIGH);
+  delay(100);
+  
   lcd.init();                     
   lcd.backlight();
+  lcd.createChar(UPARROW, upArrow);
+  lcd.createChar(DOWNARROW, downArrow);
+  lcd.createChar(CROSS, cross);
+  lcd.createChar(TICK, tick);
+}
+
+void initMessageLCD(bool SDWorking, String fileName){
   lcd.print("State:no measurement"); 
   lcd.setCursor(0, 1);
   lcd.print("Awaiting activation");
@@ -111,11 +122,6 @@ void initLCD(bool SDWorking, String fileName){
   else{
     lcd.print("File: " + fileName);
   }
-
-  lcd.createChar(UPARROW, upArrow);
-  lcd.createChar(DOWNARROW, downArrow);
-  lcd.createChar(CROSS, cross);
-  lcd.createChar(TICK, tick);
 }
 
 void initHallSensors(void) {
@@ -231,12 +237,20 @@ uint16_t evaluateMotor(uint16_t reading) {
 
 void displayStartMeasure(void){
   lcd.setCursor(0, 3);
-  lcd.print("Measuring poles    ");
-  //delay(500);
+  lcd.print("Measuring poles   ");
+  //lcd.noDisplay();
+  digitalWrite(LCD_POWER, LOW);
+}
+
+void displayEndMeasure(void){
+  //lcd.display();
+  digitalWrite(LCD_POWER, HIGH);
+  initLCD();
 }
 
 void displayNewReadingLCD(uint8_t comboIndex, uint16_t reading) {
   lcd.clear();
+  delay(10);
   for(int i = 0; i < 3; i++){ //repeat data sending so that the screen is more stable
     lcd.home();
     lcd.print("State: ");
@@ -283,7 +297,8 @@ void displayNewReadingLED(uint8_t comboIndex, uint16_t reading){
   }
 }
 
-void displaySameReadingLCD(void){
+void displaySameReadingLCD(uint8_t comboIndex, uint16_t reading){
+    displayNewReadingLCD(comboIndex, reading);
     lcd.setCursor(0, 3);
     lcd.print("Same as previous");
     delay(500);

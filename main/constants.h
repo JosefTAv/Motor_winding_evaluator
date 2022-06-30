@@ -16,6 +16,8 @@
 #define NB_HALL_SENSORS 12
 #define LAST_HALL_SENSOR_PIN 44
 
+#define LCD_POWER 8
+
 #define LED_PIN 10
 #define NB_LEDS 12
 #define BRIGHTNESS 20

@@ -17,7 +17,8 @@ void setup() {
   //initialise IO peripherals
   fileName = checkFileNamesSD();
   SDWorking = initSD(fileName);
-  initLCD(SDWorking, fileName);
+  initLCD();
+  initMessageLCD(SDWorking, fileName);
   initHallSensors();
   initLEDs();
   initRelays();
@@ -38,7 +39,9 @@ void loop() {
       unsigned long measureTime = millis();
       uint16_t measurement = readHallSensors();
       motorOff(); //Deactivate motor to conserve power
-      Serial.println(measurement, BIN);
+      delay(100);
+      displayEndMeasure();
+      
       if(measurement != oldMeasurement){ //Check if current measurement is the same as previous
         comboIndex = evaluateMotor(measurement);
         displayNewReadingLCD(comboIndex, measurement);
@@ -47,7 +50,7 @@ void loop() {
         oldMeasurement=measurement;
       }
       else{
-        displaySameReadingLCD();
+        displaySameReadingLCD(comboIndex, oldMeasurement);
         displaySameReadingLED();
       }
       if(comboIndex == CORRECT){ // check if the motor is correct or not
